@@ -2,8 +2,8 @@
 
 all: myfrm
 
-myfrm: main.c
-	gcc -g3 -Wall main.c -o myfrm
+myfrm: client.c
+	gcc -g3 -Wall client.c -o myfrm
 
 .PHONY: clean
 clean:

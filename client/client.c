@@ -1,3 +1,9 @@
+/* Simple Message Board
+ * Client code
+ * Rosalyn Tan & Nick Aiello
+ * rtan, naiello
+ */
+
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,6 +20,7 @@ void display_menu();
 void cmd_crt(int, char*, struct sockaddr_in);
 void cmd_msg(int, char*, struct sockaddr_in);
 void cmd_dlt(int, char*, struct sockaddr_in);
+void cmd_edt(int, char*, struct sockaddr_in);
 
 int main(int argc, char** argv) {
 	char* host;
@@ -141,7 +148,7 @@ int main(int argc, char** argv) {
 		} else if(!strcmp(cmd, "RDB")) {
 			// do something
 		} else if(!strcmp(cmd, "EDT")) {
-			// do something
+			cmd_edt(udpsock, cmd, sin);
 		} else if(!strcmp(cmd, "APN")) {
 			// do something
 		} else if(!strcmp(cmd, "DWN")) {
@@ -168,6 +175,8 @@ void display_menu() {
 void cmd_crt(int udpsock, char* cmd, struct sockaddr_in sin) {
 	char board_name[20];
 	short int ack;
+
+	bzero((char*)board_name, sizeof(board_name));
 
 	if(sendto(udpsock, cmd, sizeof(cmd), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
 		perror("Error sending command");
@@ -210,6 +219,9 @@ void cmd_msg(int udpsock, char* cmd, struct sockaddr_in sin) {
 	char board_name[20];
 	short int ack;
 	char message[MAX_LINE];
+
+	bzero((char*)board_name, sizeof(board_name));
+	bzero((char*)message, sizeof(message));
 
 	if(sendto(udpsock, cmd, sizeof(cmd), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
 		perror("Error sending command");
@@ -269,6 +281,8 @@ void cmd_dlt(int udpsock, char* cmd, struct sockaddr_in sin) {
 	short int ack;
 	short int del;
 
+	bzero((char*)board_name, sizeof(board_name));
+
 	if(sendto(udpsock, cmd, sizeof(cmd), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
 		perror("Error sending command");
 		return;
@@ -295,7 +309,7 @@ void cmd_dlt(int udpsock, char* cmd, struct sockaddr_in sin) {
 	del = htons(del);
 	
 	if(sendto(udpsock, &del, sizeof(del), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
-		perror("Error sending board name");
+		perror("Error sending message number");
 		return;
 	}
 
@@ -313,4 +327,78 @@ void cmd_dlt(int udpsock, char* cmd, struct sockaddr_in sin) {
 			printf("Error deleting message\n");
 		}
 	}
+}
+
+void cmd_edt(int udpsock, char* cmd, struct sockaddr_in sin) {
+	char board_name[20];
+	char message[MAX_LINE];
+	short int del;
+	short int ack;
+	
+	bzero((char*)message, sizeof(message));
+
+	if(sendto(udpsock, cmd, sizeof(cmd), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending command");
+		return;
+	}
+
+	getc(stdin);
+	printf("Enter a board name: ");
+	scanf("%[^\n]", board_name);
+
+	// send length of board name
+	short int bname_len = htons(strlen(board_name));
+	if(sendto(udpsock, &bname_len, sizeof(bname_len), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending board name length");
+		return;
+	}
+	
+	if(sendto(udpsock, board_name, strlen(board_name) + 1, 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending board name");
+		return;
+	}
+
+	printf("Which message do you want to be edited? Enter a number: ");
+	scanf("%hd", &del);
+	del = htons(del);
+
+	if(sendto(udpsock, &del, sizeof(del), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending message number");
+		return;
+	}
+
+	getc(stdin);
+	printf("What do you want your new message to be?\n");
+	scanf("%[^\n]", message);
+
+	short int message_len = htons(strlen(message));
+
+	if(sendto(udpsock, &message_len, sizeof(message_len), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending message length");
+		return;
+	}
+	
+	if(sendto(udpsock, message, strlen(message) + 1, 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending new message");
+		return;
+	}
+
+	socklen_t addr_len = sizeof(struct sockaddr);
+
+	if(recvfrom(udpsock, &ack, sizeof(ack), 0, (struct sockaddr*)&sin, &addr_len) == -1) {
+		perror("Error receiving");
+		return;
+	} else {
+		ack = ntohs(ack);
+		printf("%i\n", ack);
+		if(ack == 1) {
+			printf("Message successfully edited\n");
+		} else {
+			printf("Error editing message\n");
+		}
+	}
+}
+
+void cmd_lis(int udpsocket) {
+
 }
