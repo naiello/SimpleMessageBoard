@@ -10,4 +10,4 @@ myfrm: client.c ../common/transfer.o
 
 .PHONY: clean
 clean:
-	rm -f *.o myfrm
+	rm -f *.o myfrm ../common/transfer.o

@@ -35,6 +35,7 @@ ssize_t send_file(int sockfd, const char *filename)
 		if (send(sockfd, buffer, current, 0) < current) {
 			return sent;
 		}
+		printf("%zd\n", current);
 		sent += current;
 	}
 
@@ -100,7 +101,7 @@ ssize_t recv_file_print(int sockfd)
 		if ((current = recv(sockfd, buffer, sizeof(buffer), 0)) < 0) {
 			return recvd;
 		}
-		printf("%s", current);
+		printf("%s", buffer);
 		recvd += current;
 	}
 

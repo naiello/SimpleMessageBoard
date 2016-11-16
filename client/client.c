@@ -24,7 +24,10 @@ void cmd_msg(int, char*, struct sockaddr_in);
 void cmd_dlt(int, char*, struct sockaddr_in);
 void cmd_edt(int, char*, struct sockaddr_in);
 void cmd_lis(int, char*, struct sockaddr_in);
-void cmd_rdb(int, char*);
+void cmd_rdb(int, int, char*, struct sockaddr_in);
+void cmd_apn(int, int, char*, struct sockaddr_in);
+void cmd_dwn(int, int, char*, struct sockaddr_in);
+void cmd_dst(int, char*, struct sockaddr_in);
 
 int main(int argc, char** argv) {
 	char* host;
@@ -150,15 +153,15 @@ int main(int argc, char** argv) {
 		} else if(!strcmp(cmd, "DLT")) {
 			cmd_dlt(udpsock, cmd, sin);
 		} else if(!strcmp(cmd, "RDB")) {
-			cmd_rdb(tcpsock, cmd);
+			cmd_rdb(tcpsock, udpsock, cmd, sin);
 		} else if(!strcmp(cmd, "EDT")) {
 			cmd_edt(udpsock, cmd, sin);
 		} else if(!strcmp(cmd, "APN")) {
-			// do something
+			cmd_apn(tcpsock, udpsock, cmd, sin);
 		} else if(!strcmp(cmd, "DWN")) {
-			// do something
+			cmd_dwn(tcpsock, udpsock, cmd, sin);
 		} else if(!strcmp(cmd, "DST")) {
-			// do something
+			cmd_dst(udpsock, cmd, sin);
 		} else if(!strcmp(cmd, "XIT")) {
 			continue;
 		} else if(!strcmp(cmd, "SHT")) {
@@ -428,13 +431,12 @@ void cmd_lis(int udpsock, char* cmd, struct sockaddr_in sin) {
 	printf("%s\n", listing);
 }
 
-void cmd_rdb(int tcpsock, char* cmd) {
+void cmd_rdb(int tcpsock, int udpsock, char* cmd, struct sockaddr_in sin) {
 	char board_name[20];
-	int filesize;
 
 	bzero((char*)board_name, sizeof(board_name));
 	
-	if(write(tcpsock, cmd, sizeof(cmd)) == -1) {
+	if(sendto(udpsock, cmd, sizeof(cmd), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
 		perror("Error sending command");
 		return;
 	}
@@ -455,7 +457,7 @@ void cmd_rdb(int tcpsock, char* cmd) {
 		return;
 	}
 
-	if(read(tcpsock, &filesize, sizeof(filesize)) == -1) {
+/*	if(read(tcpsock, &filesize, sizeof(filesize)) == -1) {
 		perror("Error receiving file length");
 		return;
 	} else {
@@ -463,9 +465,136 @@ void cmd_rdb(int tcpsock, char* cmd) {
 		if(filesize < 0) {
 			return;
 		}
-	}
+	}*/
 
 	if(recv_file_print(tcpsock) < 0) {
 		perror("Error receiving board");
+	}
+}
+
+void cmd_apn(int tcpsock, int udpsock, char* cmd, struct sockaddr_in sin) {
+	char board_name[20];
+	char file_name[20];
+	short int ack;
+
+	bzero((char*)board_name, sizeof(board_name));
+	
+	if(sendto(udpsock, cmd, sizeof(cmd), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending command");
+		return;
+	}
+
+	getc(stdin);
+	printf("Enter a board name: ");
+	scanf("%[^\n]", board_name);
+
+	// send length of board name
+	short int bname_len = htons(strlen(board_name));
+	if(write(tcpsock, &bname_len, sizeof(bname_len)) == -1) {
+		perror("Error sending board name length");
+		return;
+	}
+	
+	if(write(tcpsock, board_name, strlen(board_name) + 1) == -1) {
+		perror("Error sending board name");
+		return;
+	}
+
+	getc(stdin);
+	printf("Enter a file name: ");
+	scanf("%[^\n]", file_name);
+
+	// send length of file name
+	short int fname_len = htons(strlen(file_name));
+	if(write(tcpsock, &fname_len, sizeof(fname_len)) == -1) {
+		perror("Error sending board name length");
+		return;
+	}
+	
+	if(write(tcpsock, file_name, strlen(file_name) + 1) == -1) {
+		perror("Error sending board name");
+		return;
+	}
+
+	if(read(tcpsock, &ack, sizeof(ack)) == -1) {
+		perror("Error receiving ack");
+		return;
+	} else {
+		if(ack == 0) {
+			return;
+		}
+	}
+	send_file(tcpsock, file_name);
+}
+
+void cmd_dst(int udpsock, char* cmd, struct sockaddr_in sin) {
+	char board_name[20];
+	short int ack;
+
+	bzero((char*)board_name, sizeof(board_name));
+
+	if(sendto(udpsock, cmd, sizeof(cmd), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending command");
+		return;
+	}
+
+	getc(stdin);
+	printf("Enter a board name: ");
+	scanf("%[^\n]", board_name);
+
+	// send length of board name
+	short int bname_len = htons(strlen(board_name));
+	if(sendto(udpsock, &bname_len, sizeof(bname_len), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending board name length");
+		return;
+	}
+	
+	if(sendto(udpsock, board_name, strlen(board_name) + 1, 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending board name");
+		return;
+	}
+
+	socklen_t addr_len = sizeof(struct sockaddr);
+
+	if(recvfrom(udpsock, &ack, sizeof(ack), 0, (struct sockaddr*)&sin, &addr_len) == -1) {
+		perror("Error receiving");
+		return;
+	} else {
+		ack = ntohs(ack);
+		printf("%i\n", ack);
+		if(ack == 1) {
+			printf("Board successfully destroyed\n");
+		} else {
+			printf("Error destroying board\n");
+		}
+	}
+}
+
+void cmd_dwn(int tcpsock, int udpsock, char* cmd, struct sockaddr_in sin) {
+	char board_name[20];
+	char file_name[20];
+	short int ack;
+
+	bzero((char*)board_name, sizeof(board_name));
+	
+	if(sendto(udpsock, cmd, sizeof(cmd), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending command");
+		return;
+	}
+
+	getc(stdin);
+	printf("Enter a board name: ");
+	scanf("%[^\n]", board_name);
+
+	// send length of board name
+	short int bname_len = htons(strlen(board_name));
+	if(write(tcpsock, &bname_len, sizeof(bname_len)) == -1) {
+		perror("Error sending board name length");
+		return;
+	}
+	
+	if(write(tcpsock, board_name, strlen(board_name) + 1) == -1) {
+		perror("Error sending board name");
+		return;
 	}
 }
