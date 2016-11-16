@@ -165,7 +165,11 @@ int main(int argc, char **argv)
 			} else if (!strcmp(cmdstr, CMDSTR_LIS)) {
 				list_boards(dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
 			} else if (!strcmp(cmdstr, CMDSTR_RDB)) {
-				read_board(sockfd);
+				read_board(destfd);
+			} else if (!strcmp(cmdstr, CMDSTR_DST)) {
+				destroy_board(user, dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
+			} else if (!strcmp(cmdstr, CMDSTR_APN)) {
+				append_file(user, destfd);
 			} else {
 				printf("unk command: %s\n", cmdstr);
 			}

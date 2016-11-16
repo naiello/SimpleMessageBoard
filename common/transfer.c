@@ -1,5 +1,8 @@
 #include <arpa/inet.h>
+#include <error.h>
+#include <errno.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -41,33 +44,43 @@ ssize_t send_file(int sockfd, const char *filename)
 ssize_t recv_file(int sockfd, const char *filename) 
 {
 	FILE *file;
-	size_t recvd = 0, current, filesz;
+	size_t recvd = 0, current;
+	uint32_t filesz;
 	char buffer[XFER_BUFSZ];
 
+	printf("1 - %s\n", filename);
 	// check to see if file already exists
 	if (access(filename, F_OK) == 0) {
 		return -3;
 	}
 
+	printf("2\n");
 	file = fopen(filename, "w");
 	if (!file) {
 		return -2;
 	}
 
+	printf("3\n");
 	// receive the file size
 	if (recv(sockfd, &filesz, sizeof(filesz), 0) < 0) {
+		error(1, errno, "problem");
 		return -1;
 	}
 	filesz = ntohl(filesz);
+	printf("got file size %i\n", filesz);
 
 	while (recvd < filesz) { 
+		memset(buffer, 0, sizeof(buffer));
 		if ((current = recv(sockfd, buffer, sizeof(buffer), 0)) < 0) {
 			return recvd;
 		}
 
+		printf("buffer is %s\n", buffer);
 		fwrite(buffer, sizeof(char), current, file);
 		recvd += current;
 	}
+
+	fclose(file);
 
 	return recvd;
 }
