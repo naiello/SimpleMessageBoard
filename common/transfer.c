@@ -81,13 +81,13 @@ ssize_t send_long(uint32_t val, int sockfd, struct sockaddr *addr, socklen_t len
 	return sendto(sockfd, &val, sizeof(val), 0, addr, len);
 }
 
-uint32_t recv_long(int sockfd, struct sockaddr *addr, socklen_t len) {
+uint32_t recv_long(int sockfd, struct sockaddr *addr, socklen_t *len) {
 	uint32_t buf;
-	recvfrom(sockfd, &buf, sizeof(buf), 0, addr, &len);
+	recvfrom(sockfd, &buf, sizeof(buf), 0, addr, len);
 	return ntohl(buf);
 }
 
-uint16_t recv_short(int sockfd, struct sockaddr *addr, socklen_t len) {
+uint16_t recv_short(int sockfd, struct sockaddr *addr, socklen_t *len) {
 	uint16_t buf;
 	recvfrom(sockfd, &buf, sizeof(buf), 0, addr, &len);
 	return ntohs(buf);
