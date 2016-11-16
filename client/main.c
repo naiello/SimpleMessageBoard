@@ -12,18 +12,22 @@
 int main(int argc, char** argv) {
 	char* host;
 	int portNum;
+	char* portChar;
 	int udpsock;
 	int tcpsock;	
 	struct hostent* hp;
 	struct sockaddr_in sin;
 	struct addrinfo hints, *serv_addr;
-
+	char username[20];
+	char password[20];
+	
 	if(argc != 3) {
 		perror("Invalid number of arguments");
 		exit(1);
 	} else {
 		host = argv[1];
-		portNum = atoi(argv[2]);	
+		portNum = atoi(argv[2]);
+		portChar = argv[2];
 	}
 	
 	hp = gethostbyname(host);
@@ -47,7 +51,7 @@ int main(int argc, char** argv) {
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 
-	if(getaddrinfo(host, portNum, &hints, &serv_addr) != 0) {
+	if(getaddrinfo(host, portChar, &hints, &serv_addr) != 0) {
 		perror("Failed to resolve server");
 		exit(1);
 	}
@@ -59,5 +63,25 @@ int main(int argc, char** argv) {
 	if(connect(tcpsock, serv_addr->ai_addr, serv_addr->ai_addrlen) != 0) {
 		perror("Failed to connect to server");
 	}
+
+	bzero((char*)username, sizeof(username));
+	printf("Enter username: ");
+	scanf("%s", username);
+
+	// send username to server
+	if(sendto(udpsock, username, strlen(username) + 1, 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Client username send error");
+		exit(1);
+	}
 	
+	bzero((char*)password, sizeof(password));
+	printf("Enter password: ");
+	scanf("%s", password);
+
+	// send password to server
+	if(sendto(udpsock, password, strlen(password) + 1, 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Client password send error");
+		exit(1);
+	}
+	return 0;	
 }
