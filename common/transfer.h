@@ -7,6 +7,7 @@
 
 ssize_t send_file(int, const char *);
 ssize_t recv_file(int, const char *);
+ssize_t recv_file_print(int);
 
 ssize_t send_short(uint16_t, int, struct sockaddr *, socklen_t);
 ssize_t send_long(uint32_t, int, struct sockaddr *, socklen_t);
