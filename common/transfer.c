@@ -72,6 +72,28 @@ ssize_t recv_file(int sockfd, const char *filename)
 	return recvd;
 }
 
+ssize_t recv_file_print(int sockfd) 
+{
+	size_t recvd = 0, current, filesz;
+	char buffer[XFER_BUFSZ];
+
+	// receive the file size
+	if (recv(sockfd, &filesz, sizeof(filesz), 0) < 0) {
+		return -1;
+	}
+	filesz = ntohl(filesz);
+
+	while (recvd < filesz) { 
+		if ((current = recv(sockfd, buffer, sizeof(buffer), 0)) < 0) {
+			return recvd;
+		}
+		printf("%s", current);
+		recvd += current;
+	}
+
+	return recvd;
+}
+
 ssize_t send_short(uint16_t val, int sockfd, struct sockaddr *addr, socklen_t len) {
 	val = htons(val);
 	return sendto(sockfd, &val, sizeof(val), 0, addr, len);
