@@ -21,6 +21,8 @@ ssize_t send_file(int sockfd, const char *filename)
 	net_filesz = htonl(filesz);
 	rewind(file);
 
+	printf("%zd\n", filesz);
+
 	if (send(sockfd, &net_filesz, sizeof(net_filesz), 0) < 0) {
 		return -1;
 	}
@@ -31,6 +33,7 @@ ssize_t send_file(int sockfd, const char *filename)
 		if (send(sockfd, buffer, current, 0) < current) {
 			return sent;
 		}
+		printf("%zd\n", current);
 		sent += current;
 	}
 
@@ -86,7 +89,7 @@ ssize_t recv_file_print(int sockfd)
 		if ((current = recv(sockfd, buffer, sizeof(buffer), 0)) < 0) {
 			return recvd;
 		}
-		printf("%s", current);
+		printf("%s", buffer);
 		recvd += current;
 	}
 
