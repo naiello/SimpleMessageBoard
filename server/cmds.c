@@ -1,3 +1,10 @@
+
+/* Simple Message Board
+ * server
+ * Rosalyn Tan & Nick Aiello
+ * rtan, naiello
+ */
+
 #include <dirent.h>
 #include <stdio.h>
 #include <unistd.h>

@@ -1,3 +1,10 @@
+
+/* Simple Message Board
+ * server
+ * Rosalyn Tan & Nick Aiello
+ * rtan, naiello
+ */
+
 #include <arpa/inet.h>
 #include <error.h>
 #include <errno.h>
