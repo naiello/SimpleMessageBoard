@@ -8,20 +8,21 @@
 ssize_t send_file(int sockfd, const char *filename)
 {
 	FILE *file = fopen(filename, "r");
-	ssize_t filesz, sent = 0, net_filesz, current;
+	ssize_t filesz, sent = 0, current;
+	int32_t net_filesz;
 	char buffer[XFER_BUFSZ];
 
 	if (!file) {
-		return -2;
+		filesz = -1;
+	} else {
+		// get file size
+		fseek(file, 0, SEEK_END);
+		filesz = ftell(file);
+		rewind(file);
 	}
-
-	// get file size
-	fseek(file, 0, SEEK_END);
-	filesz = ftell(file);
 	net_filesz = htonl(filesz);
-	rewind(file);
 
-	if (send(sockfd, &net_filesz, sizeof(net_filesz), 0) < 0) {
+	if ((send(sockfd, &net_filesz, sizeof(net_filesz), 0) < 0) || filesz < 0) {
 		return -1;
 	}
 

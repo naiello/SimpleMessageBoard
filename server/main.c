@@ -18,14 +18,13 @@
 int main(int argc, char **argv) 
 {
 	char *port, *adminpass;
-	struct addrinfo hints, *dg_server, *server;
-	struct sockaddr_in *client_addr;
+	struct addrinfo hints, *server;
+	struct sockaddr_in client_addr;
+	struct sockaddr_in addr;
 	struct sockaddr_in dg_addr;
 	struct sockaddr_in dg_client_addr;
 	int sockfd, destfd, dg_sockfd;
 	int yes = 1;
-	uint16_t cmd;
-	ssize_t xfer_sz;
 	userhash users;
 	socklen_t addrlen;
 	int done = 0;
@@ -62,6 +61,10 @@ int main(int argc, char **argv)
 	dg_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	dg_addr.sin_port = htons(atoi(port));
 
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	addr.sin_port = htons(atoi(port));
+
 	// open TCP socket
 	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		error(1, errno, "Failed to open TCP socket.\n");
@@ -82,9 +85,9 @@ int main(int argc, char **argv)
 	}*/
 
 	// bind TCP socket
-	if (bind(sockfd, server->ai_addr, server->ai_addrlen) == -1) {
+	if (bind(sockfd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
 		close(sockfd);
-		error(1, errno, "Failed to bind TCP socket.\n");
+		error(1, errno, "Failed to bind TCP socket.");
 	}
 
 	// bind UDP socket
@@ -109,7 +112,7 @@ int main(int argc, char **argv)
 	printf("listening\n");
 	users = userhash_create();
 	while (!done) {
-		destfd = accept(sockfd, (struct sockaddr *)&client_addr, &addrlen);
+		destfd = accept(sockfd, (struct sockaddr *)&addr, &addrlen);
 		printf("got connection\n");
 
 		// request user name
@@ -150,6 +153,7 @@ int main(int argc, char **argv)
 				error(1, 0, "bad read (cmd)");
 			}
 			printf("got cmd %s\n", cmdstr);
+			fflush(stdout);
 			if (!strcmp(cmdstr, CMDSTR_CRT)) {
 				create_board(user, dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
 			} else if (!strcmp(cmdstr, CMDSTR_MSG)) {
@@ -158,6 +162,12 @@ int main(int argc, char **argv)
 				delete_message(user, dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
 			} else if (!strcmp(cmdstr, CMDSTR_EDT)) {
 				edit_message(user, dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
+			} else if (!strcmp(cmdstr, CMDSTR_LIS)) {
+				list_boards(dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
+			} else if (!strcmp(cmdstr, CMDSTR_RDB)) {
+				read_board(sockfd);
+			} else {
+				printf("unk command: %s\n", cmdstr);
 			}
 		}
 
