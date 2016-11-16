@@ -89,6 +89,6 @@ uint32_t recv_long(int sockfd, struct sockaddr *addr, socklen_t *len) {
 
 uint16_t recv_short(int sockfd, struct sockaddr *addr, socklen_t *len) {
 	uint16_t buf;
-	recvfrom(sockfd, &buf, sizeof(buf), 0, addr, &len);
+	recvfrom(sockfd, &buf, sizeof(buf), 0, addr, len);
 	return ntohs(buf);
 }
