@@ -14,6 +14,8 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
+#include "../common/transfer.h"
+
 #define MAX_LINE 4096
 
 void display_menu();
@@ -21,6 +23,8 @@ void cmd_crt(int, char*, struct sockaddr_in);
 void cmd_msg(int, char*, struct sockaddr_in);
 void cmd_dlt(int, char*, struct sockaddr_in);
 void cmd_edt(int, char*, struct sockaddr_in);
+void cmd_lis(int, char*, struct sockaddr_in);
+void cmd_rdb(int, char*);
 
 int main(int argc, char** argv) {
 	char* host;
@@ -140,13 +144,13 @@ int main(int argc, char** argv) {
 		if(!strcmp(cmd, "CRT")) {
 			cmd_crt(udpsock, cmd, sin);
 		} else if(!strcmp(cmd, "LIS")) {
-			// do something
+			cmd_lis(udpsock, cmd, sin);
 		} else if(!strcmp(cmd, "MSG")) {
 			cmd_msg(udpsock, cmd, sin);
 		} else if(!strcmp(cmd, "DLT")) {
 			cmd_dlt(udpsock, cmd, sin);
 		} else if(!strcmp(cmd, "RDB")) {
-			// do something
+			cmd_rdb(tcpsock, cmd);
 		} else if(!strcmp(cmd, "EDT")) {
 			cmd_edt(udpsock, cmd, sin);
 		} else if(!strcmp(cmd, "APN")) {
@@ -399,6 +403,69 @@ void cmd_edt(int udpsock, char* cmd, struct sockaddr_in sin) {
 	}
 }
 
-void cmd_lis(int udpsocket) {
+void cmd_lis(int udpsock, char* cmd, struct sockaddr_in sin) {
+	int list_len;
+	char listing[MAX_LINE];
+	socklen_t addr_len;
 
+	bzero((char*)listing, sizeof(listing));
+
+	if(sendto(udpsock, cmd, sizeof(cmd), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending command");
+		return;
+	}
+
+	if(recvfrom(udpsock, &list_len, sizeof(list_len), 0, (struct sockaddr*)&sin, &addr_len) == -1) {
+		perror("Error receiving listing length");
+		return;
+	}
+
+	if(recvfrom(udpsock, listing, MAX_LINE, 0, (struct sockaddr*)&sin, &addr_len) == -1) {
+		perror("Error receiving listing");
+		return;
+	}
+
+	printf("%s\n", listing);
+}
+
+void cmd_rdb(int tcpsock, char* cmd) {
+	char board_name[20];
+	int filesize;
+
+	bzero((char*)board_name, sizeof(board_name));
+	
+	if(write(tcpsock, cmd, sizeof(cmd)) == -1) {
+		perror("Error sending command");
+		return;
+	}
+
+	getc(stdin);
+	printf("Enter a board name: ");
+	scanf("%[^\n]", board_name);
+
+	// send length of board name
+	short int bname_len = htons(strlen(board_name));
+	if(write(tcpsock, &bname_len, sizeof(bname_len)) == -1) {
+		perror("Error sending board name length");
+		return;
+	}
+	
+	if(write(tcpsock, board_name, strlen(board_name) + 1) == -1) {
+		perror("Error sending board name");
+		return;
+	}
+
+	if(read(tcpsock, &filesize, sizeof(filesize)) == -1) {
+		perror("Error receiving file length");
+		return;
+	} else {
+		filesize = ntohs(filesize);
+		if(filesize < 0) {
+			return;
+		}
+	}
+
+	if(recv_file_print(tcpsock) < 0) {
+		perror("Error receiving board");
+	}
 }
