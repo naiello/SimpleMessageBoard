@@ -174,14 +174,16 @@ int main(int argc, char **argv)
 				download_file(destfd);
 			} else if (!strcmp(cmdstr, CMDSTR_SHT)) {
 				shutdown_server(adminpass, dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
+			} else if (!strcmp(cmdstr, CMDSTR_XIT)) {
+				break;
 			} else {
 				printf("unk command: %s\n", cmdstr);
 			}
 		}
 
-		userhash_free(users);
 		close(destfd);
 	}
+	userhash_free(users);
 
 	return 0;
 }

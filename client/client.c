@@ -164,6 +164,9 @@ int main(int argc, char** argv) {
 		} else if(!strcmp(cmd, "DST")) {
 			cmd_dst(udpsock, cmd, sin);
 		} else if(!strcmp(cmd, "XIT")) {
+			if(sendto(udpsock, cmd, sizeof(cmd), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+				perror("Error sending command");
+			}
 			continue;
 		} else if(!strcmp(cmd, "SHT")) {
 			if(cmd_sht(tcpsock, udpsock, cmd, sin) == 1) {
@@ -607,6 +610,7 @@ void cmd_dwn(int tcpsock, int udpsock, char* cmd, struct sockaddr_in sin) {
 int cmd_sht(int tcpsock, int udpsock, char* cmd, struct sockaddr_in sin) {
 	char password[20];
 	short int ack;
+	short int len;
 
 	bzero((char*)password, sizeof(password));
 
@@ -617,8 +621,9 @@ int cmd_sht(int tcpsock, int udpsock, char* cmd, struct sockaddr_in sin) {
 
 	printf("Enter the admin password: ");
 	scanf("%s", password);
+	len = htons(strlen(password));
 
-	if(sendto(udpsock, password, strlen(password) + 1, 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+	if((sendto(udpsock, &len, sizeof(len), 0, (struct sockaddr *)&sin, sizeof(struct sockaddr)) == -1) || (sendto(udpsock, password, strlen(password) + 1, 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1)) {
 		perror("Error sending password");
 		return -1;
 	}
