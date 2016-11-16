@@ -467,7 +467,6 @@ void cmd_rdb(int tcpsock, int udpsock, char* cmd, struct sockaddr_in sin) {
 void cmd_apn(int tcpsock, int udpsock, char* cmd, struct sockaddr_in sin) {
 	char board_name[20];
 	char file_name[20];
-	short int ack;
 
 	bzero((char*)board_name, sizeof(board_name));
 	

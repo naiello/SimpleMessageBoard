@@ -1,5 +1,5 @@
 CC = gcc
-FLAGS = -Wall -g3
+FLAGS = -Wall
 
 all: myfrmd
 
