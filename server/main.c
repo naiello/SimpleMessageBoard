@@ -118,9 +118,9 @@ int main(int argc, char **argv)
 		// request user name
 		//send_short(1, dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
 		//printf("sent request\n");
-		size = recv_short(dg_sockfd, (struct sockaddr *)&dg_client_addr, &addrlen);
+		size = recv_short(dg_sockfd, (struct sockaddr *)&dg_addr, &addrlen);
 		printf("got size of username %i\n", size);
-		if (recvfrom(dg_sockfd, user, size, 0, (struct sockaddr *)&dg_client_addr, &addrlen) < 0) {
+		if (recvfrom(dg_sockfd, user, size, 0, (struct sockaddr *)&dg_addr, &addrlen) < 0) {
 			error(1, errno, "Bad read (user)");
 		}
 
@@ -128,19 +128,19 @@ int main(int argc, char **argv)
 
 		// send 1 if existing user, 0 if not
 		uinfo = userhash_find(users, user);
-		//send_short((uinfo) ? 1 : 0, dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
+		send_short((uinfo) ? 1 : 0, dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
 
 		// read in a password
-		size = recv_short(dg_sockfd, (struct sockaddr *)&dg_client_addr, &addrlen);
+		size = recv_short(dg_sockfd, (struct sockaddr *)&dg_addr, &addrlen);
 		printf("got size of password %i\n", size);
-		if (recvfrom(dg_sockfd, pass, size, 0, (struct sockaddr *)&dg_client_addr, &addrlen) < 0) {
+		if (recvfrom(dg_sockfd, pass, size, 0, (struct sockaddr *)&dg_addr, &addrlen) < 0) {
 			error(1, errno, "Bad read (pass)");
 		}
 
 		printf("got password %s\n", pass);
 
 		if (uinfo && strcmp(pass, uinfo->pass)) {
-			send_short(-1, dg_sockfd, (struct sockaddr *)&client_addr, addrlen);
+			send_short(-1, dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
 			break;
 		} else if (!uinfo) {
 			userhash_add(users, user, pass);
@@ -170,6 +170,10 @@ int main(int argc, char **argv)
 				destroy_board(user, dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
 			} else if (!strcmp(cmdstr, CMDSTR_APN)) {
 				append_file(user, destfd);
+			} else if (!strcmp(cmdstr, CMDSTR_DWN)) {
+				download_file(destfd);
+			} else if (!strcmp(cmdstr, CMDSTR_SHT)) {
+				shutdown_server(adminpass, dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
 			} else {
 				printf("unk command: %s\n", cmdstr);
 			}

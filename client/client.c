@@ -95,12 +95,12 @@ int main(int argc, char** argv) {
 	addr_len = sizeof(struct sockaddr);
 
 	// wait for server to request username
-	if(recvfrom(udpsock, &ack, sizeof(ack), 0, (struct sockaddr*)&sin, &addr_len) == -1) {
+	/*if(recvfrom(udpsock, &ack, sizeof(ack), 0, (struct sockaddr*)&sin, &addr_len) == -1) {
 		perror("Receive ack failed");
 		exit(1);
 	} else {
 		printf("Username requested\n");
-	}
+	}*/
 
 	short int user_len = htons(strlen(username));
 	// send username length
@@ -484,7 +484,7 @@ void cmd_apn(int tcpsock, int udpsock, char* cmd, struct sockaddr_in sin) {
 		return;
 	}
 	
-	if(write(tcpsock, board_name, strlen(board_name) + 1) == -1) {
+	if(write(tcpsock, board_name, strlen(board_name)) == -1) {
 		perror("Error sending board name");
 		return;
 	}
@@ -500,19 +500,19 @@ void cmd_apn(int tcpsock, int udpsock, char* cmd, struct sockaddr_in sin) {
 		return;
 	}
 	
-	if(write(tcpsock, file_name, strlen(file_name) + 1) == -1) {
+	if(write(tcpsock, file_name, strlen(file_name)) == -1) {
 		perror("Error sending file name");
 		return;
 	}
 
-	if(read(tcpsock, &ack, sizeof(ack)) == -1) {
+	/*if(read(tcpsock, &ack, sizeof(ack)) == -1) {
 		perror("Error receiving ack");
 		return;
 	} else {
 		if(ack == 0) {
 			return;
 		}
-	}
+	}*/
 	send_file(tcpsock, file_name);
 }
 

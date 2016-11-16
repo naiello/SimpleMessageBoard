@@ -11,10 +11,11 @@
 ssize_t send_file(int sockfd, const char *filename)
 {
 	FILE *file = fopen(filename, "r");
-	ssize_t filesz, sent = 0, current;
-	int32_t net_filesz;
+	ssize_t sent = 0, current;
+	int32_t net_filesz, filesz;
 	char buffer[XFER_BUFSZ];
 
+	printf("start\n");
 	if (!file) {
 		filesz = -1;
 	} else {
@@ -24,6 +25,7 @@ ssize_t send_file(int sockfd, const char *filename)
 		rewind(file);
 	}
 	net_filesz = htonl(filesz);
+	printf("filesize %i\n", filesz);
 
 	if ((send(sockfd, &net_filesz, sizeof(net_filesz), 0) < 0) || filesz < 0) {
 		return -1;
@@ -69,6 +71,7 @@ ssize_t recv_file(int sockfd, const char *filename)
 	}
 	filesz = ntohl(filesz);
 	printf("got file size %i\n", filesz);
+	fflush(stdout);
 
 	while (recvd < filesz) { 
 		memset(buffer, 0, sizeof(buffer));
