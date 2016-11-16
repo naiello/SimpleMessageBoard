@@ -24,6 +24,9 @@ int main(int argc, char **argv)
 	userhash users;
 	socklen_t addrlen;
 	int done = 0;
+	char user[20], pass[20];
+	uint16_t size;
+	userinfo *uinfo = NULL;
 
 	if (argc != 3) {
 		error(1, 0, "Usage: %s [port] [admin-pass]\n", argv[0]);
@@ -92,16 +95,39 @@ int main(int argc, char **argv)
 		error(1, errno, "Listen failed (TCP).\n");
 	}
 
+	users = userhash_create();
 	while (!done) {
 		destfd = accept(sockfd, (struct sockaddr *)&client_addr, &addrlen);
-		users = userhash_create();
+
+		// request user name
+		send_short(1, dg_sockfd, (struct sockaddr *)&client_addr, addrlen);
+		size = recv_short(dg_sockfd, (struct sockaddr *)&client_addr, &addrlen);
+		if (recvfrom(dg_sockfd, user, size, 0, (struct sockaddr *)&client_addr, &addrlen) < 0) {
+			error(1, errno, "Bad read (user)\n");
+		}
+
+		// send 1 if existing user, 0 if not
+		uinfo = userinfo_find(users, user);
+		send_short((uinfo) ? 1 : 0, dg_sockfd, (struct sockaddr *)&client_addr, addrlen);
+
+		// read in a password
+		size = recv_short(dg_sockfd, (struct sockaddr *)&client_addr, &addrlen);
+		if (recvfrom(dg_sockfd, pass, size, 0, (struct sockaddr *)&client_addr, &addrlen) < 0) {
+			error(1, errno, "Bad read (pass)\n");
+		}
+
+		// if user is found and password incorrect, send -1
+		// otherwise send 1
+		if (uinfo && strcmp(pass, uinfo->pass)) {
+			send_short(-1, dg_sockfd, (struct sockaddr *)&client_addr, addrlen);
+			break;
+		} else if (!uinfo) {
+			userhash_add(users, user, pass);
+		}
+		send_short(1, dg_sockfd, (struct sockaddr *)&client_addr, addrlen);
 
 		while (!done) {
-			if ((xfer_sz = recvfrom(dg_sockfd, &cmd, sizeof(cmd), 0, (struct sockaddr *)&dg_client_addr, &addrlen)) == -1) {
-				error(1, errno, "Invalid recvfrom\n");
-			}
 	
-			cmd = ntohs(cmd);
 			switch (cmd) {
 				case CMD_XIT:
 					// this shouldn't happen on the server

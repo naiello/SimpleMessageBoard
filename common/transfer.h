@@ -10,7 +10,7 @@ ssize_t recv_file(int, const char *);
 
 ssize_t send_short(uint16_t, int, struct sockaddr *, socklen_t);
 ssize_t send_long(uint32_t, int, struct sockaddr *, socklen_t);
-uint16_t recv_short(int, struct sockaddr *, socklen_t);
-uint32_t recv_long(int, struct sockaddr *, socklen_t);
+uint16_t recv_short(int, struct sockaddr *, socklen_t*);
+uint32_t recv_long(int, struct sockaddr *, socklen_t*);
 
 #endif
