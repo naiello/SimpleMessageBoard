@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,7 +8,12 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
-#define BUF_SIZE 4096
+#define MAX_LINE 4096
+
+void display_menu();
+void cmd_crt(int, char*, struct sockaddr_in);
+void cmd_msg(int, char*, struct sockaddr_in);
+void cmd_dlt(int, char*, struct sockaddr_in);
 
 int main(int argc, char** argv) {
 	char* host;
@@ -20,7 +26,10 @@ int main(int argc, char** argv) {
 	struct addrinfo hints, *serv_addr;
 	char username[20];
 	char password[20];
-	
+	short int ack;
+	socklen_t addr_len;
+	char cmd[4];
+
 	if(argc != 3) {
 		perror("Invalid number of arguments");
 		exit(1);
@@ -68,6 +77,23 @@ int main(int argc, char** argv) {
 	printf("Enter username: ");
 	scanf("%s", username);
 
+	addr_len = sizeof(struct sockaddr);
+/*
+	// wait for server to request username
+	if(recvfrom(udpsock, &ack, sizeof(ack), 0, (struct sockaddr*)&sin, &addr_len) == -1) {
+		perror("Receive ack failed");
+		exit(1);
+	} else {
+		printf("Username requested\n");
+	}
+*/
+	short int user_len = htons(strlen(username));
+	// send username length
+	if(sendto(udpsock, &user_len, sizeof(user_len), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Username size send error");
+		exit(1);
+	}
+
 	// send username to server
 	if(sendto(udpsock, username, strlen(username) + 1, 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
 		perror("Client username send error");
@@ -77,11 +103,214 @@ int main(int argc, char** argv) {
 	bzero((char*)password, sizeof(password));
 	printf("Enter password: ");
 	scanf("%s", password);
+/*
+	if(recvfrom(udpsock, &ack, sizeof(ack), 0, (struct sockaddr*)&sin, &addr_len) == -1) {
+		perror("Receive ack failed");
+		exit(1);
+	}
+*/
+	short int pass_len = htons(strlen(password));
+	if(sendto(udpsock, &pass_len, sizeof(pass_len), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Send password length error");
+		exit(1);
+	}
 
 	// send password to server
 	if(sendto(udpsock, password, strlen(password) + 1, 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
 		perror("Client password send error");
 		exit(1);
 	}
+
+	int i;
+	bzero((char*)cmd, sizeof(cmd));
+	while(strcmp(cmd, "XIT")) {
+		display_menu();
+		scanf("%s", cmd);
+		for(i = 0; i < strlen(cmd); i++ ) {
+			cmd[i] = toupper(cmd[i]);
+		}
+		cmd[3] = '\0';
+		if(!strcmp(cmd, "CRT")) {
+			cmd_crt(udpsock, cmd, sin);
+		} else if(!strcmp(cmd, "LIS")) {
+			// do something
+		} else if(!strcmp(cmd, "MSG")) {
+			cmd_msg(udpsock, cmd, sin);
+		} else if(!strcmp(cmd, "DLT")) {
+			cmd_dlt(udpsock, cmd, sin);
+		} else if(!strcmp(cmd, "RDB")) {
+			// do something
+		} else if(!strcmp(cmd, "EDT")) {
+			// do something
+		} else if(!strcmp(cmd, "APN")) {
+			// do something
+		} else if(!strcmp(cmd, "DWN")) {
+			// do something
+		} else if(!strcmp(cmd, "DST")) {
+			// do something
+		} else if(!strcmp(cmd, "XIT")) {
+			continue;
+		} else if(!strcmp(cmd, "SHT")) {
+			// do something
+		} else {
+			printf("Please enter a valid option\n");
+		}
+		
+	}
 	return 0;	
+}
+
+void display_menu() {
+	printf("Please select one of the following options:\n");
+	printf("CRT: Create Board\nLIS: List Boards\nMSG: Leave Message\nDLT: Delete Message\nRDB: Read Board\nEDT: Edit Message\nAPN: Append File\nDWN: Download File\nDST: Destroy Board\nXIT: Exit\nSHT: Shutdown Server\n");
+}
+
+void cmd_crt(int udpsock, char* cmd, struct sockaddr_in sin) {
+	char board_name[20];
+	short int ack;
+
+	if(sendto(udpsock, cmd, sizeof(cmd), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending command");
+		return;
+	}
+
+	getc(stdin);
+	printf("Enter a board name: ");
+	scanf("%[^\n]", board_name);
+
+	// send length of board name
+	short int bname_len = htons(strlen(board_name));
+	if(sendto(udpsock, &bname_len, sizeof(bname_len), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending board name length");
+		return;
+	}
+	
+	if(sendto(udpsock, board_name, strlen(board_name) + 1, 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending board name");
+		return;
+	}
+
+	socklen_t addr_len = sizeof(struct sockaddr);
+
+	if(recvfrom(udpsock, &ack, sizeof(ack), 0, (struct sockaddr*)&sin, &addr_len) == -1) {
+		perror("Error receiving");
+		return;
+	} else {
+		ack = ntohs(ack);
+		printf("%i\n", ack);
+		if(ack == 1) {
+			printf("Board successfully created\n");
+		} else {
+			printf("Error creating board\n");
+		}
+	}
+}
+
+void cmd_msg(int udpsock, char* cmd, struct sockaddr_in sin) {
+	char board_name[20];
+	short int ack;
+	char message[MAX_LINE];
+
+	if(sendto(udpsock, cmd, sizeof(cmd), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending command");
+		return;
+	}
+
+	getc(stdin);
+	printf("Enter a board name: ");
+	scanf("%[^\n]", board_name);
+
+	// send length of board name
+	short int bname_len = htons(strlen(board_name));
+	if(sendto(udpsock, &bname_len, sizeof(bname_len), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending board name length");
+		return;
+	}
+	
+	if(sendto(udpsock, board_name, strlen(board_name) + 1, 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending board name");
+		return;
+	}
+
+	getc(stdin);
+	printf("Enter a message: ");
+	scanf("%[^\n]", message);
+
+	// send length of message
+	short int message_len = htons(strlen(message));
+	if(sendto(udpsock, &message_len, sizeof(message_len), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending message length");
+		return;
+	}
+	
+	if(sendto(udpsock, message, strlen(message) + 1, 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending message");
+		return;
+	}
+	
+	socklen_t addr_len = sizeof(struct sockaddr);
+
+	if(recvfrom(udpsock, &ack, sizeof(ack), 0, (struct sockaddr*)&sin, &addr_len) == -1) {
+		perror("Error receiving");
+		return;
+	} else {
+		ack = ntohs(ack);
+		printf("%i\n", ack);
+		if(ack == 1) {
+			printf("Message successfully posted\n");
+		} else {
+			printf("Board does not exist\n");
+		}
+	}
+}
+
+void cmd_dlt(int udpsock, char* cmd, struct sockaddr_in sin) {
+	char board_name[20];
+	short int ack;
+	short int del;
+
+	if(sendto(udpsock, cmd, sizeof(cmd), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending command");
+		return;
+	}
+
+	getc(stdin);
+	printf("Enter a board name: ");
+	scanf("%[^\n]", board_name);
+
+	// send length of board name
+	short int bname_len = htons(strlen(board_name));
+	if(sendto(udpsock, &bname_len, sizeof(bname_len), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending board name length");
+		return;
+	}
+	
+	if(sendto(udpsock, board_name, strlen(board_name) + 1, 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending board name");
+		return;
+	}
+
+	printf("Which message do you want to be deleted? Enter a number: ");
+	scanf("%hd", &del);
+	del = htons(del);
+	
+	if(sendto(udpsock, &del, sizeof(del), 0, (struct sockaddr*)&sin, sizeof(struct sockaddr)) == -1) {
+		perror("Error sending board name");
+		return;
+	}
+
+	socklen_t addr_len = sizeof(struct sockaddr);
+
+	if(recvfrom(udpsock, &ack, sizeof(ack), 0, (struct sockaddr*)&sin, &addr_len) == -1) {
+		perror("Error receiving");
+		return;
+	} else {
+		ack = ntohs(ack);
+		printf("%i\n", ack);
+		if(ack == 1) {
+			printf("Message successfully deleted\n");
+		} else {
+			printf("Error deleting message\n");
+		}
+	}
 }
