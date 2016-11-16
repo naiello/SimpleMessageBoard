@@ -19,10 +19,8 @@ int main(int argc, char **argv)
 {
 	char *port, *adminpass;
 	struct addrinfo hints, *server;
-	struct sockaddr_in client_addr;
 	struct sockaddr_in addr;
 	struct sockaddr_in dg_addr;
-	struct sockaddr_in dg_client_addr;
 	int sockfd, destfd, dg_sockfd;
 	int yes = 1;
 	userhash users;
@@ -109,22 +107,18 @@ int main(int argc, char **argv)
 		error(1, errno, "Listen failed (TCP).");
 	}
 
-	printf("listening\n");
 	users = userhash_create();
 	while (!done) {
 		destfd = accept(sockfd, (struct sockaddr *)&addr, &addrlen);
-		printf("got connection\n");
 
 		// request user name
 		//send_short(1, dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
 		//printf("sent request\n");
 		size = recv_short(dg_sockfd, (struct sockaddr *)&dg_addr, &addrlen);
-		printf("got size of username %i\n", size);
 		if (recvfrom(dg_sockfd, user, size, 0, (struct sockaddr *)&dg_addr, &addrlen) < 0) {
 			error(1, errno, "Bad read (user)");
 		}
 
-		printf("got username %s\n", user);
 
 		// send 1 if existing user, 0 if not
 		uinfo = userhash_find(users, user);
@@ -132,12 +126,10 @@ int main(int argc, char **argv)
 
 		// read in a password
 		size = recv_short(dg_sockfd, (struct sockaddr *)&dg_addr, &addrlen);
-		printf("got size of password %i\n", size);
 		if (recvfrom(dg_sockfd, pass, size, 0, (struct sockaddr *)&dg_addr, &addrlen) < 0) {
 			error(1, errno, "Bad read (pass)");
 		}
 
-		printf("got password %s\n", pass);
 
 		if (uinfo && strcmp(pass, uinfo->pass)) {
 			send_short(-1, dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
@@ -152,8 +144,6 @@ int main(int argc, char **argv)
 			if (recvfrom(dg_sockfd, cmdstr, 4, 0, (struct sockaddr *)&dg_addr, &addrlen) < 1) {
 				error(1, 0, "bad read (cmd)");
 			}
-			printf("got cmd %s\n", cmdstr);
-			fflush(stdout);
 			if (!strcmp(cmdstr, CMDSTR_CRT)) {
 				create_board(user, dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
 			} else if (!strcmp(cmdstr, CMDSTR_MSG)) {
@@ -174,14 +164,16 @@ int main(int argc, char **argv)
 				download_file(destfd);
 			} else if (!strcmp(cmdstr, CMDSTR_SHT)) {
 				shutdown_server(adminpass, dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
+			} else if (!strcmp(cmdstr, CMDSTR_XIT)) {
+				break;
 			} else {
 				printf("unk command: %s\n", cmdstr);
 			}
 		}
 
-		userhash_free(users);
 		close(destfd);
 	}
+	userhash_free(users);
 
 	return 0;
 }

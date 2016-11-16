@@ -15,7 +15,6 @@ ssize_t send_file(int sockfd, const char *filename)
 	int32_t net_filesz, filesz;
 	char buffer[XFER_BUFSZ];
 
-	printf("start\n");
 	if (!file) {
 		filesz = -1;
 	} else {
@@ -25,7 +24,6 @@ ssize_t send_file(int sockfd, const char *filename)
 		rewind(file);
 	}
 	net_filesz = htonl(filesz);
-	printf("filesize %i\n", filesz);
 
 	if ((send(sockfd, &net_filesz, sizeof(net_filesz), 0) < 0) || filesz < 0) {
 		return -1;
@@ -37,7 +35,6 @@ ssize_t send_file(int sockfd, const char *filename)
 		if (send(sockfd, buffer, current, 0) < current) {
 			return sent;
 		}
-		printf("%zd\n", current);
 		sent += current;
 	}
 
@@ -51,27 +48,22 @@ ssize_t recv_file(int sockfd, const char *filename)
 	uint32_t filesz;
 	char buffer[XFER_BUFSZ];
 
-	printf("1 - %s\n", filename);
 	// check to see if file already exists
 	if (access(filename, F_OK) == 0) {
 		return -3;
 	}
 
-	printf("2\n");
 	file = fopen(filename, "w");
 	if (!file) {
 		return -2;
 	}
 
-	printf("3\n");
 	// receive the file size
 	if (recv(sockfd, &filesz, sizeof(filesz), 0) < 0) {
 		error(1, errno, "problem");
 		return -1;
 	}
 	filesz = ntohl(filesz);
-	printf("got file size %i\n", filesz);
-	fflush(stdout);
 
 	while (recvd < filesz) { 
 		memset(buffer, 0, sizeof(buffer));
@@ -79,7 +71,6 @@ ssize_t recv_file(int sockfd, const char *filename)
 			return recvd;
 		}
 
-		printf("buffer is %s\n", buffer);
 		fwrite(buffer, sizeof(char), current, file);
 		recvd += current;
 	}
