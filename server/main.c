@@ -154,6 +154,10 @@ int main(int argc, char **argv)
 				create_board(user, dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
 			} else if (!strcmp(cmdstr, CMDSTR_MSG)) {
 				message_board(user, dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
+			} else if (!strcmp(cmdstr, CMDSTR_DLT)) {
+				delete_message(user, dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
+			} else if (!strcmp(cmdstr, CMDSTR_EDT)) {
+				edit_message(user, dg_sockfd, (struct sockaddr *)&dg_addr, addrlen);
 			}
 		}
 
